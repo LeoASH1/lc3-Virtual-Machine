@@ -91,9 +91,33 @@ uint16_t reg[R_COUNT];
 
 //Input Buffering
 //Handle Interrupt
-//Sign Extend
+
+//Sign Extend for immediate mode as 5 bits need to be converted to 16 and the number needs to be conserved
+uint16_t sign_extend(uint16_t x, int bit_count)
+{
+    if ((x >> (bit_count - 1)) & 1) {
+        x |= (0xFFFF << bit_count);
+    }
+    return x;
+}
 //Swap
-//Update Flags
+//Update Flags depenidng on Opcode result
+void update_flags(uint16_t r)
+{
+    if (reg[r] >> 15) 
+    {
+        reg[conditional_flag] = Flag_Negative;
+    }
+    else if (reg[r] == 0)
+    {
+        reg[conditional_flag] = Flag_Zero;
+    }
+    else
+    {
+        reg[conditional_flag] = Flag_Positive;
+    }
+}
+
 //Read Image File
 //Read Image
 //Memory Access
