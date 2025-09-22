@@ -212,8 +212,16 @@ int main(int argc, const char* argv[])
                 update_flags(register_0);
 
                 break;
-            case OP_Not:
                 
+            case OP_Not:
+                uint16_t register_0 = (instruction >> 9) & 0X7;
+                uint16_t register_1 = (instruction >> 6) & 0x7;
+
+                //destination register becomes the opposite of register_1
+                reg[register_0] = ~reg[register_1];
+
+                update_flags(register_0);
+
                 break;
             case OP_Branch:
                 
