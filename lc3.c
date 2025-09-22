@@ -166,7 +166,7 @@ int main(int argc, const char* argv[])
     switch (opcode)
         {
             case OP_Add:
-                // Destination register
+                // Destination register (store loaded value)
                 uint16_t register_0 = (instruction >> 9) & 0x7;
                 // first operand
                 uint16_t register_1 = (instruction >> 6) & 0x7;
@@ -205,8 +205,18 @@ int main(int argc, const char* argv[])
             case OP_Load:
                 
                 break;
+
+            //loads a value from memory to register, its encoding contains Opcode 1010 and oprands a destination register and PCoffset9 which is a value imbedded in instruction (address for number in memory)
             case OP_LoadIndirect:
-               
+               {
+                // gets the destination register
+                uint16_t register_0 = (instruction >> 9) & 0x7;
+                // gets PC offset bits: 8 to 0
+                uint16_t pc_offset = sign_extend(instruction & 0x1FF, 9);
+                // adds PC offset to the current PC, Then gets memory location of final address 
+                reg[register_0] = mem_read(mem_read(reg[PC_Register] + pc_offset));
+                update_flags(register_0);
+}
                 break;
             case OP_LoadRegister:
                 
