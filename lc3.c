@@ -212,7 +212,7 @@ int main(int argc, const char* argv[])
                 update_flags(register_0);
 
                 break;
-                
+
             case OP_Not:
                 uint16_t register_0 = (instruction >> 9) & 0X7;
                 uint16_t register_1 = (instruction >> 6) & 0x7;
@@ -223,7 +223,24 @@ int main(int argc, const char* argv[])
                 update_flags(register_0);
 
                 break;
+
             case OP_Branch:
+                {
+
+                // extracts lowest 9 bits to get pc offset
+                uint16_t pc_offset = sign_extend(instruction & 0x1FF, 9);
+
+                // extracts the condition codes (negative, zero, positive)
+                uint16_t cond_flag = (instruction >> 9) & 0x7;
+
+
+                if (cond_flag & reg[conditional_flag])
+                {
+
+                // update PC
+                reg[PC_Register] += pc_offset;
+                }
+                }
                 
                 break;
             case OP_Jump:
