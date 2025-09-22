@@ -187,8 +187,30 @@ int main(int argc, const char* argv[])
 
                 update_flags(register_0);
                 break;
+
+            // bitwise addition so uses & instead of +
             case OP_And:
-                
+                // Destination register (store loaded value) 
+                // 0x7 is hexadecimal for 7 which gives the lowest 3 bits so instruction shifts by 9 and then you keep bits [11:9]
+                uint16_t register_0 = (instruction >> 9) & 0x7;
+                // first operand
+                uint16_t register_1 = (instruction >> 6) & 0x7;
+                // for immediate mode
+                uint16_t immediate_flag = (instruction >> 5) & 0x1;
+
+                if (immediate_flag)
+                {
+                    uint16_t imm5 = sign_extend(instruction & 0x1F, 5);
+                    reg[register_0] = reg[register_1] & imm5;   
+                }
+
+                else
+                {
+                    uint16_t register_2 = instruction & 0x7;
+                    reg[register_0] = reg[register_1] & reg[register_2];
+                }
+                update_flags(register_0);
+
                 break;
             case OP_Not:
                 
