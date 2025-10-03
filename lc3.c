@@ -32,7 +32,7 @@ uint16_t check_key()
 }
 
 
-//Memory Mapped Registers 8 general purpose, 2 with designated roles
+//registers
 enum
 {
     register_0 = 0,
@@ -48,16 +48,15 @@ enum
     R_COUNT
 };
 
-//TRAP codes PC moves to codes address of TRAP code and afterwards resets to initial instruction
+
+// conditional flags (provide info about a recently executed calculation)
 enum
 {
-    TRAP_GETC = 0x20,  /* get character from keyboard, not echoed onto the terminal */
-    TRAP_OUT = 0x21,   /* output a character */
-    TRAP_PUTS = 0x22,  /* output a word string */
-    TRAP_IN = 0x23,    /* get character from keyboard, echoed onto the terminal */
-    TRAP_PUTSP = 0x24, /* output a byte string */
-    TRAP_HALT = 0x25   /* halt the program */
+    Flag_Positive = 1 << 0,
+    Flag_Zero = 1 << 1, 
+    Flag_Negative = 1 << 2, 
 };
+
 
 //OPCodes (tells the computer to do a simple task)
 enum
@@ -81,6 +80,28 @@ enum
 };
 
 
+
+
+//Memory Mapped Registers 8 general purpose, 2 with designated roles with special address in memory (often used for certain harware)
+enum
+{
+    MR_KBSR = 0xFE00, // keyboard status 
+    MR_KBDR = 0xFE02  // keyboard data
+};
+
+//TRAP codes PC moves to codes address of TRAP code and afterwards resets to initial instruction
+enum
+{
+    TRAP_GETC = 0x20,  /* get character from keyboard, not echoed onto the terminal */
+    TRAP_OUT = 0x21,   /* output a character */
+    TRAP_PUTS = 0x22,  /* output a word string */
+    TRAP_IN = 0x23,    /* get character from keyboard, echoed onto the terminal */
+    TRAP_PUTSP = 0x24, /* output a byte string */
+    TRAP_HALT = 0x25   /* halt the program */
+};
+
+
+
 //MEMORY STORAGE with 65,536 memory locations
 
 // shifting 1 bit 16 places to the left
@@ -89,16 +110,10 @@ enum
 uint16_t memory[MEMORY_MAX];
 
 
-// conditional flags (provide info about a recently executed calculation)
-enum
-{
-    Flag_Positive = 1 << 0,
-    Flag_Zero = 1 << 1, 
-    Flag_Negative = 1 << 2, 
-};
 
 //Register Storage
 uint16_t reg[R_COUNT];
+
 
 //Input Buffering
 //Handle Interrupt
@@ -111,12 +126,14 @@ uint16_t sign_extend(uint16_t x, int bit_count)
     }
     return x;
 }
+
 //Swap
     // reads program into VM memory fixing endianess
     uint16_t swap16(uint16_t x)
     {
     return (x << 8) | (x >> 8);
     }   
+
 
 //Update Flags depenidng on Opcode result
 void update_flags(uint16_t r)
@@ -167,8 +184,28 @@ int read_image(const char* image_path)
     fclose(file);
     return 1;
 }
-//Memory Access
+//Memory Access uses getter(check keyboard inputs) and setter(sends information to memory address of registers for that input)  
+void mem_write(uint16_t address, uint16_t val)
+{
+    memory[address] = val;
+}
 
+uint16_t mem_read(uint16_t address)
+{
+    if (address == MR_KBSR)
+    {
+        if (check_key())
+        {
+            memory[MR_KBSR] = (1 << 15);
+            memory[MR_KBDR] = getchar();
+        }
+        else
+        {
+            memory[MR_KBSR] = 0;
+        }
+    }
+    return memory[address];
+}
 
 
 //main loop initilising argument count and argument vector
