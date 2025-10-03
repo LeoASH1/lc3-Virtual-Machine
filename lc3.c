@@ -112,6 +112,12 @@ uint16_t sign_extend(uint16_t x, int bit_count)
     return x;
 }
 //Swap
+    // reads program into VM memory fixing endianess
+    uint16_t swap16(uint16_t x)
+    {
+    return (x << 8) | (x >> 8);
+    }   
+
 //Update Flags depenidng on Opcode result
 void update_flags(uint16_t r)
 {
@@ -129,8 +135,38 @@ void update_flags(uint16_t r)
     }
 }
 
-//Read Image File
-//Read Image
+//Read Image File (instructions get into memory of the VM by first 16 bits of program file stating address in memory where program should start) instructions of what program should do comes after
+// this function opens the file, finds origin and copies over instructions
+void read_image_file(FILE* file)
+{
+    // origin tells us where in memory to place the image 
+    uint16_t origin;
+    fread(&origin, sizeof(origin), 1, file);
+    origin = swap16(origin);
+
+    // figuring out the most amount of instructions we can fit in memory from the origin
+    uint16_t max_read = MEMORY_MAX - origin;
+    uint16_t* p = memory + origin;
+    size_t read = fread(p, sizeof(uint16_t), max_read, file);
+
+    // swap to little endian (least signifant byte read first) so its read correctly
+    while (read-- > 0)
+    {
+        *p = swap16(*p);
+        ++p;
+    }
+}
+
+
+//Read Image which opens and closes the file whilst calling read_image_file to do the loading
+int read_image(const char* image_path)
+{
+    FILE* file = fopen(image_path, "rb");
+    if (!file) { return 0; };
+    read_image_file(file);
+    fclose(file);
+    return 1;
+}
 //Memory Access
 
 
