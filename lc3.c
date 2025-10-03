@@ -6,31 +6,6 @@
 #include <conio.h>  // _kbhit
 
 
-HANDLE hStdin = INVALID_HANDLE_VALUE;
-DWORD fdwMode, fdwOldMode;
-
-void disable_input_buffering()
-{
-    hStdin = GetStdHandle(STD_INPUT_HANDLE);
-    GetConsoleMode(hStdin, &fdwOldMode); /* save old mode */
-    fdwMode = fdwOldMode
-            ^ ENABLE_ECHO_INPUT  /* no input echo */
-            ^ ENABLE_LINE_INPUT; /* return when one or
-                                    more characters are available */
-    SetConsoleMode(hStdin, fdwMode); /* set new mode */
-    FlushConsoleInputBuffer(hStdin); /* clear buffer */
-}
-
-void restore_input_buffering()
-{
-    SetConsoleMode(hStdin, fdwOldMode);
-}
-
-uint16_t check_key()
-{
-    return WaitForSingleObject(hStdin, 1000) == WAIT_OBJECT_0 && _kbhit();
-}
-
 
 //registers
 enum
@@ -116,7 +91,40 @@ uint16_t reg[R_COUNT];
 
 
 //Input Buffering
+HANDLE hStdin = INVALID_HANDLE_VALUE;
+DWORD fdwMode, fdwOldMode;
+
+void disable_input_buffering()
+{
+    hStdin = GetStdHandle(STD_INPUT_HANDLE);
+    GetConsoleMode(hStdin, &fdwOldMode); /* save old mode */
+    fdwMode = fdwOldMode
+            ^ ENABLE_ECHO_INPUT  /* no input echo */
+            ^ ENABLE_LINE_INPUT; /* return when one or
+                                    more characters are available */
+    SetConsoleMode(hStdin, fdwMode); /* set new mode */
+    FlushConsoleInputBuffer(hStdin); /* clear buffer */
+}
+
+void restore_input_buffering()
+{
+    SetConsoleMode(hStdin, fdwOldMode);
+}
+
+uint16_t check_key()
+{
+    return WaitForSingleObject(hStdin, 1000) == WAIT_OBJECT_0 && _kbhit();
+}
+
+
+
 //Handle Interrupt
+void handle_interrupt(int signal)
+{
+    restore_input_buffering();
+    printf("\n");
+    exit(-2);
+}
 
 //Sign Extend for immediate mode as 5 bits need to be converted to 16 and the number needs to be conserved
 uint16_t sign_extend(uint16_t x, int bit_count)
@@ -227,6 +235,9 @@ int main(int argc, const char* argv[])
             exit(1);
         }
     }
+
+    signal(SIGINT, handle_interrupt);
+    disable_input_buffering();
 
     // initialise a zero flag as one should be set at any time
     reg[conditional_flag] = Flag_Zero;
@@ -493,6 +504,7 @@ int main(int argc, const char* argv[])
                 break;
         }
     }
-    //Shutdown
+    //restores terminal settings when program inturupted 
+    restore_input_buffering();
 }
 
