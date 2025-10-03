@@ -48,6 +48,17 @@ enum
     R_COUNT
 };
 
+//TRAP codes PC moves to codes address of TRAP code and afterwards resets to initial instruction
+enum
+{
+    TRAP_GETC = 0x20,  /* get character from keyboard, not echoed onto the terminal */
+    TRAP_OUT = 0x21,   /* output a character */
+    TRAP_PUTS = 0x22,  /* output a word string */
+    TRAP_IN = 0x23,    /* get character from keyboard, echoed onto the terminal */
+    TRAP_PUTSP = 0x24, /* output a byte string */
+    TRAP_HALT = 0x25   /* halt the program */
+};
+
 //OPCodes (tells the computer to do a simple task)
 enum
 {
@@ -244,13 +255,37 @@ int main(int argc, const char* argv[])
                 
                 break;
             case OP_Jump:
-                
+                {
+                // sets PC to stored value in register
+                uint16_t r1 = (instruction >> 6) & 0x7;
+                reg[PC_Register] = reg[r1];
+                }
                 break;
+
             case OP_JumpRegister:
-                
+                {
+                uint16_t long_flag = (instruction >> 11) & 1;
+                reg[register_7 ] = reg[PC_Register];
+                if (long_flag)
+                {
+                uint16_t long_pc_offset = sign_extend(instruction & 0x7FF, 11);
+                reg[PC_Register] += long_pc_offset;  
+                }
+                else
+                {
+                uint16_t r1 = (instruction >> 6) & 0x7;
+                reg[PC_Register] = reg[r1]; 
+                }
+                }
+
                 break;
             case OP_Load:
-                
+                {
+                uint16_t r0 = (instruction >> 9) & 0x7;
+                uint16_t pc_offset = sign_extend(instruction & 0x1FF, 9);
+                reg[r0] = mem_read(reg[PC_Register] + pc_offset);
+                update_flags(r0);
+                }
                 break;
 
             //loads a value from memory to register, its encoding contains Opcode 1010 and oprands a destination register and PCoffset9 which is a value imbedded in instruction (address for number in memory)
@@ -266,22 +301,117 @@ int main(int argc, const char* argv[])
 }
                 break;
             case OP_LoadRegister:
-                
+                {
+                uint16_t r0 = (instruction >> 9) & 0x7;
+                uint16_t r1 = (instruction >> 6) & 0x7;
+                uint16_t offset = sign_extend(instruction & 0x3F, 6);
+                reg[r0] = mem_read(reg[r1] + offset);
+                update_flags(r0);
+                }
                 break;
             case OP_LEA:
+            {
+             uint16_t r0 = (instruction >> 9) & 0x7;
+            uint16_t pc_offset = sign_extend(instruction & 0x1FF, 9);
+            reg[r0] = reg[PC_Register] + pc_offset;
+            update_flags(r0);
+            }
                 
                 break;
             case OP_Store:
-                
+                {
+                uint16_t r0 = (instruction >> 9) & 0x7;
+                uint16_t pc_offset = sign_extend(instruction & 0x1FF, 9);
+                mem_write(reg[PC_Register] + pc_offset, reg[r0]);
+                }
                 break;
             case OP_StoreIndirect:
-               
+               {
+                uint16_t r0 = (instruction >> 9) & 0x7;
+                uint16_t pc_offset = sign_extend(instruction & 0x1FF, 9);
+                mem_write(mem_read(reg[PC_Register] + pc_offset), reg[r0]);
+                }
                 break;
             case OP_StoreRegister:
-               
+               {
+                uint16_t r0 = (instruction >> 9) & 0x7;
+                uint16_t r1 = (instruction >> 6) & 0x7;
+                uint16_t offset = sign_extend(instruction & 0x3F, 6);
+                mem_write(reg[r1] + offset, reg[r0]);
+                }
                 break;
+            
+            //Trap routines perform tasks from I/O devices such as inputs from a keyboard but arent restricted to inputs
             case OP_Trap:
+                reg[register_7] = reg[PC_Register];
+
+                switch (instruction & 0xFF)
+                {
+                case TRAP_GETC:
+              /* read a single ASCII char */
+                reg[register_0] = (uint16_t)getchar();
+                update_flags(register_0);
+                }
+                break;
                 
+
+                case TRAP_OUT:
+                {
+                putc((char)reg[register_0], stdout);
+                fflush(stdout);
+                }
+                break;
+                
+
+                // outputs a string on the console
+                case TRAP_PUTS:
+                {
+                /* one char per word */
+                uint16_t* c = memory + reg[register_0];
+                while (*c)
+                {
+                putc((char)*c, stdout);
+                ++c;
+                }
+                fflush(stdout);
+                }
+                break;
+
+                case TRAP_IN:
+                {
+                printf("Enter a character: ");
+                char c = getchar();
+                putc(c, stdout);
+                fflush(stdout);
+                reg[register_0] = (uint16_t)c;
+                update_flags(register_0);
+                }
+                break;
+
+                case TRAP_PUTSP:
+                {
+                /* one char per byte (two bytes per word)
+                 here we need to swap back to
+                big endian format */
+                uint16_t* c = memory + reg[register_0];
+                while (*c)
+                {
+                char char1 = (*c) & 0xFF;
+                putc(char1, stdout);
+                char char2 = (*c) >> 8;
+                if (char2) putc(char2, stdout);
+                ++c;
+                }
+                 fflush(stdout);
+                }
+                break;
+
+                case TRAP_HALT:
+                {
+                puts("HALT");
+                fflush(stdout);
+                running = 0;
+                }
                 break;
             case OP_Reserved:
             case OP_RTI:
