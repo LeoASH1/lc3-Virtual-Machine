@@ -99,7 +99,7 @@ void disable_input_buffering()
     hStdin = GetStdHandle(STD_INPUT_HANDLE);
     GetConsoleMode(hStdin, &fdwOldMode); /* save old mode */
     fdwMode = fdwOldMode
-            ^ ENABLE_ECHO_INPUT  /* no input echo */
+            ^ ENABLE_ECHO_INPUT /* no input echo */
             ^ ENABLE_LINE_INPUT; /* return when one or
                                     more characters are available */
     SetConsoleMode(hStdin, fdwMode); /* set new mode */
@@ -261,6 +261,7 @@ int main(int argc, const char* argv[])
     switch (opcode)
         {
             case OP_Add:
+            {
                 // Destination register (store loaded value)
                 uint16_t register_0 = (instruction >> 9) & 0x7;
                 // first operand
@@ -281,10 +282,12 @@ int main(int argc, const char* argv[])
                 }
 
                 update_flags(register_0);
+            }
                 break;
 
             // bitwise addition so uses & instead of +
             case OP_And:
+            {
                 // Destination register (store loaded value) 
                 // 0x7 is hexadecimal for 7 which gives the lowest 3 bits so instruction shifts by 9 and then you keep bits [11:9]
                 uint16_t register_0 = (instruction >> 9) & 0x7;
@@ -305,10 +308,12 @@ int main(int argc, const char* argv[])
                     reg[register_0] = reg[register_1] & reg[register_2];
                 }
                 update_flags(register_0);
+            }
 
                 break;
 
             case OP_Not:
+            {
                 uint16_t register_0 = (instruction >> 9) & 0X7;
                 uint16_t register_1 = (instruction >> 6) & 0x7;
 
@@ -316,6 +321,7 @@ int main(int argc, const char* argv[])
                 reg[register_0] = ~reg[register_1];
 
                 update_flags(register_0);
+            }
 
                 break;
 
@@ -432,10 +438,12 @@ int main(int argc, const char* argv[])
                 switch (instruction & 0xFF)
                 {
                 case TRAP_GETC:
+                {
               /* read a single ASCII char */
                 reg[register_0] = (uint16_t)getchar();
                 update_flags(register_0);
                 }
+            
                 break;
                 
 
@@ -491,10 +499,13 @@ int main(int argc, const char* argv[])
                 break;
 
                 case TRAP_HALT:
-                {
+                
                 puts("HALT");
+                {
                 fflush(stdout);
                 running = 0;
+                break;
+                }
                 }
                 break;
             case OP_Reserved:
